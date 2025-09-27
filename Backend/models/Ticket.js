@@ -14,7 +14,7 @@ const TicketSchema = new mongoose.Schema(
     token: { type: String, index: true },
     subject: { type: String, required: true },
     name: { type: String },
-    email: { type: String },
+    email: { type: String, lowercase: true, trim: true },
     phone: { type: String },
     description: { type: String },
     status: { type: String, enum: ['Open', 'In Progress', 'Closed'], default: 'Open' },

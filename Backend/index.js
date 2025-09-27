@@ -36,7 +36,22 @@ app.use(cors({
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' }
 }));
-app.use(mongoSanitize());
+// Important: In Express 5, req.query is a read-only getter. The default
+// express-mongo-sanitize middleware attempts to reassign req.query, which
+// throws "Cannot set property query of #<IncomingMessage> which has only a getter".
+// To avoid this, sanitize only mutable locations explicitly and skip req.query.
+app.use((req, res, next) => {
+  try {
+    if (req.body) req.body = mongoSanitize.sanitize(req.body);
+    if (req.params) req.params = mongoSanitize.sanitize(req.params);
+    if (req.headers) req.headers = mongoSanitize.sanitize(req.headers);
+  } catch (e) {
+    // Do not crash on sanitize errors; proceed to next middleware
+    // and let route-level validation handle edge cases.
+    console.error('mongoSanitize error (non-fatal):', e && (e.message || e));
+  }
+  next();
+});
 
 // Body limit to prevent abuse
 app.use(express.json({ limit: '200kb' }));

@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const Otp = require('../models/Otp');
 const { sendOtpMail } = require('../utils/mailer');
+const BlockedClient = require('../models/BlockedClient');
 
 const router = express.Router();
 
@@ -20,6 +21,26 @@ const otpLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
+});
+
+// Public, rate-limited endpoint to check if an email is blocked (used by external signup services)
+const blockCheckLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.get('/blocked/:email', blockCheckLimiter, async (req, res) => {
+  try {
+    const email = String(req.params.email || '').toLowerCase().trim();
+    if (!email) return res.status(400).json({ message: 'Email is required' });
+    const exists = await BlockedClient.exists({ email });
+    return res.json({ email, blocked: Boolean(exists) });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ message: 'Failed to check block status' });
+  }
 });
 
 router.post('/request-otp', otpLimiter, async (req, res) => {

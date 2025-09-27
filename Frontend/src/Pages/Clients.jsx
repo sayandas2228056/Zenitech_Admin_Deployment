@@ -8,6 +8,8 @@ const Clients = () => {
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [deletingEmail, setDeletingEmail] = useState('');
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState({ email: '', name: '', phone: '' });
 
   const api = import.meta.env.VITE_ADMIN_API;
 
@@ -27,6 +29,39 @@ const Clients = () => {
       setError(e.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openAdd = () => {
+    setForm({ email: '', name: '', phone: '' });
+    setShowAdd(true);
+  };
+
+  const submitAdd = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${api}/api/clients`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          email: form.email,
+          name: form.name,
+          phone: form.phone
+        })
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.message || 'Failed to add client');
+      }
+      setShowAdd(false);
+      await fetchClients();
+    } catch (e) {
+      alert(e.message || 'Failed to add client');
     }
   };
 
@@ -69,6 +104,7 @@ const Clients = () => {
   };
 
   return (
+    <>
     <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 p-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
@@ -76,14 +112,22 @@ const Clients = () => {
           <h1 className="text-3xl font-bold text-gray-800 tracking-tight">
             Clients
           </h1>
-          <div className="relative w-full sm:w-72">
-            <Search className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
-            <input
-              className="border border-gray-300 rounded-lg pl-10 pr-4 py-2 w-full shadow-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition"
-              placeholder="Search by name or email"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="relative w-full sm:w-72">
+              <Search className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
+              <input
+                className="border border-gray-300 rounded-lg pl-10 pr-4 py-2 w-full shadow-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition"
+                placeholder="Search by name or email"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <button
+              onClick={openAdd}
+              className="px-4 py-2 rounded-lg text-sm font-medium bg-orange-600 text-white hover:bg-orange-700 transition"
+            >
+              Add Client
+            </button>
           </div>
         </div>
 
@@ -124,7 +168,7 @@ const Clients = () => {
                 </div>
                 <div className="col-span-1">
                   <span className="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-700 font-medium">
-                    {c.ticketCount}
+                    {c.ticketCount ?? 0}
                   </span>
                 </div>
                 <div className="col-span-2 text-right flex items-center justify-end gap-3">
@@ -160,6 +204,64 @@ const Clients = () => {
         )}
       </div>
     </div>
+
+    {/* Add Client Modal */}
+    {showAdd && (
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+        <div className="bg-white w-full max-w-md rounded-2xl shadow-xl p-6">
+          <h2 className="text-xl font-semibold mb-4">Add Client</h2>
+          <form onSubmit={submitAdd} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input
+                type="email"
+                required
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                placeholder="user@example.com"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+              <input
+                type="text"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                placeholder="Full name"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+              <input
+                type="text"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                placeholder="Phone number"
+              />
+            </div>
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowAdd(false)}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-orange-600 text-white hover:bg-orange-700"
+              >
+                Save
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
 
