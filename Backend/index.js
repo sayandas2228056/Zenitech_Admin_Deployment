@@ -22,8 +22,12 @@ app.use(cors({
   origin: function (origin, callback) {
     // Allow non-browser requests (no origin)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error('Not allowed by CORS: ' + origin));
+    // Also allow common Vercel preview/prod domains if desired
+    if (allowedOrigins.includes(origin) || /\.vercel\.app$/i.test(new URL(origin).hostname)) {
+      return callback(null, true);
+    }
+    // Do not treat as server error; simply omit CORS headers
+    return callback(null, false);
   },
   credentials: true,
   optionsSuccessStatus: 204
@@ -49,12 +53,25 @@ app.use(apiLimiter);
 // Connect to Mongo
 connectDB().catch((e) => {
   console.error('Mongo connection error:', e);
-  process.exit(1);
+  // In serverless, do not exit; allow function to respond and retry on next cold start
+  if (!process.env.VERCEL) {
+    process.exit(1);
+  }
 });
 
 // Routes
 app.get('/', (req, res) => {
   res.send("Zenitech Admin API");
+});
+app.get('/health', (req, res) => {
+  const mongoose = require('mongoose');
+  res.json({
+    status: 'ok',
+    vercel: Boolean(process.env.VERCEL),
+    node: process.version,
+    mongoConnected: mongoose.connection && mongoose.connection.readyState === 1,
+    allowedOrigins,
+  });
 });
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/tickets', require('./routes/tickets'));
