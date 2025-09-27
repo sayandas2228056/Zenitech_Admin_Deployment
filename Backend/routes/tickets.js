@@ -24,6 +24,9 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid ticket id' });
+    }
     const ticket = await Ticket.findById(id);
     if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
     return res.json(ticket);
@@ -37,11 +40,20 @@ router.get('/:id', async (req, res) => {
 router.patch('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid ticket id' });
+    }
     const { status, subject, description } = req.body || {};
     const update = {};
-    if (status) update.status = status;
-    if (subject) update.subject = subject;
-    if (description) update.description = description;
+    if (typeof subject === 'string') update.subject = subject.trim().slice(0, 300);
+    if (typeof description === 'string') update.description = description.slice(0, 5000);
+    if (typeof status === 'string') {
+      const allowed = ['Open', 'In Progress', 'Closed'];
+      if (!allowed.includes(status)) {
+        return res.status(400).json({ message: 'Invalid status' });
+      }
+      update.status = status;
+    }
 
     // Load existing ticket to check for status changes
     const existing = await Ticket.findById(id);
@@ -73,6 +85,9 @@ router.patch('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid ticket id' });
+    }
     const deleted = await Ticket.findByIdAndDelete(id);
     if (!deleted) return res.status(404).json({ message: 'Ticket not found' });
     return res.json({ message: 'Deleted' });

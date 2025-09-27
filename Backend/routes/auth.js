@@ -1,5 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
 const Otp = require('../models/Otp');
 const { sendOtpMail } = require('../utils/mailer');
 
@@ -12,7 +14,15 @@ const ALLOWED_EMAILS = new Set([
   'rahaman@zenitech.in',
 ]);
 
-router.post('/request-otp', async (req, res) => {
+// Apply strict rate limits on auth endpoints to prevent brute force
+const otpLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.post('/request-otp', otpLimiter, async (req, res) => {
   try {
     const { email } = req.body || {};
     if (!email) return res.status(400).json({ message: 'Email is required' });
@@ -21,10 +31,11 @@ router.post('/request-otp', async (req, res) => {
       return res.status(403).json({ message: 'Email not authorized' });
     }
     const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const codeHash = crypto.createHash('sha256').update(code).digest('hex');
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
     await Otp.deleteMany({ email: emailLc });
-    await Otp.create({ email: emailLc, code, expiresAt });
+    await Otp.create({ email: emailLc, code: codeHash, expiresAt });
 
     await sendOtpMail(emailLc, code);
 
@@ -35,13 +46,14 @@ router.post('/request-otp', async (req, res) => {
   }
 });
 
-router.post('/verify-otp', async (req, res) => {
+router.post('/verify-otp', otpLimiter, async (req, res) => {
   try {
     const { email, code } = req.body || {};
     if (!email || !code) return res.status(400).json({ message: 'Email and code are required' });
     const emailLc = String(email).toLowerCase().trim();
 
-    const record = await Otp.findOne({ email: emailLc, code: String(code) });
+    const codeHash = crypto.createHash('sha256').update(String(code)).digest('hex');
+    const record = await Otp.findOne({ email: emailLc, code: codeHash });
     if (!record) return res.status(401).json({ message: 'Invalid code' });
     if (record.expiresAt < new Date()) {
       await Otp.deleteMany({ email: emailLc });
