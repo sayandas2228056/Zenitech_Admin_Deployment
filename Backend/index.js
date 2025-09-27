@@ -39,6 +39,12 @@ app.use('/api/tickets', require('./routes/tickets'));
 app.use('/api/clients', require('./routes/clients'));
 // Agents and Settings routes removed
 
-app.listen(port, () => {
-  console.log(`✅ Server is running at http://localhost:${port}`);
-});
+// Only start the server when running locally or in a traditional Node environment.
+// On Vercel, we export the app to be used by a serverless function.
+if (!process.env.VERCEL) {
+  app.listen(port, () => {
+    console.log(`✅ Server is running at http://localhost:${port}`);
+  });
+}
+
+module.exports = app;
