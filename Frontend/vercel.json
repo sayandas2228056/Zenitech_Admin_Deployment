@@ -1,10 +1,7 @@
 {
   "rewrites": [
     {
-      "source": "/(.*)",
-      "has": [
-        { "type": "header", "key": "Accept", "value": "text/html" }
-      ],
+      "source": "/((?!api|assets|.*\\..*|_next).*)",
       "destination": "/index.html"
     }
   ]
