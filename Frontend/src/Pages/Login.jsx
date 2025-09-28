@@ -21,13 +21,15 @@ const Login = () => {
     ])
     const emailLc = trimmed.toLowerCase()
     const isAllowed = allowedEmails.has(emailLc)
+
     if (!isAllowed) {
       setError('This email is not authorized. Please use your assigned Zenitech email.')
       return
     }
+
     setError('')
     setLoading(true)
-    const adminApi = import.meta.env.VITE_ADMIN_API;
+    const adminApi = import.meta.env.VITE_ADMIN_API
     fetch(`${adminApi}/api/auth/request-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -50,25 +52,25 @@ const Login = () => {
   }
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center px-6 overflow-hidden bg-gradient-to-br from-indigo-100 via-pink-50 to-orange-100">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-indigo-100 via-pink-50 to-orange-100 px-4 sm:px-6 lg:px-8">
       {/* Decorative Blobs */}
       <motion.div
-        className="absolute -top-32 -left-32 w-72 h-72 bg-pink-300/30 rounded-full blur-3xl"
+        className="absolute -top-32 -left-32 h-56 w-56 sm:h-72 sm:w-72 bg-pink-300/30 rounded-full blur-3xl"
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 1, ease: 'easeOut' }}
       />
       <motion.div
-        className="absolute -bottom-40 -right-40 w-96 h-96 bg-indigo-300/30 rounded-full blur-3xl"
+        className="absolute -bottom-32 -right-32 h-72 w-72 sm:h-96 sm:w-96 bg-indigo-300/30 rounded-full blur-3xl"
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 1, ease: 'easeOut', delay: 0.2 }}
       />
 
       {/* Main Card */}
-      <div className="w-full max-w-md z-10">
+      <div className="relative z-10 w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl">
         <motion.div
-          className="backdrop-blur-xl bg-white/80 rounded-3xl shadow-2xl border border-white/40 p-8"
+          className="rounded-3xl border border-white/40 bg-white/80 p-6 sm:p-8 md:p-10 shadow-2xl backdrop-blur-xl"
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.6, ease: 'easeOut' }}
@@ -76,7 +78,7 @@ const Login = () => {
           {/* Header */}
           <div className="mb-8 text-center">
             <motion.div
-              className="flex items-center justify-center gap-4"
+              className="flex flex-col items-center justify-center gap-4 sm:flex-row"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, ease: 'easeOut', delay: 0.1 }}
@@ -84,48 +86,54 @@ const Login = () => {
               <img
                 src={Logo}
                 alt="Zenitech Solutions Logo"
-                className="h-16 w-16 rounded-full object-cover shadow-md border border-slate-200"
+                className="h-14 w-14 sm:h-16 sm:w-16 rounded-full object-cover shadow-md border border-slate-200"
               />
-              <h2 className="inline-flex items-baseline gap-2 whitespace-nowrap text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight leading-tight">
-                <span className="text-orange-500">Zenitech</span>
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight leading-tight">
+                <span className="text-orange-500">Zenitech</span>{' '}
                 <span className="text-indigo-600">Solutions</span>
               </h2>
             </motion.div>
-            <h1 className="mt-5 text-2xl md:text-3xl font-semibold text-slate-900">
+            <h1 className="mt-6 text-xl sm:text-2xl md:text-3xl font-semibold text-slate-900">
               Welcome Back 👋
             </h1>
             <motion.p
-              className="mt-2 text-slate-600 text-sm md:text-base"
+              className="mt-2 text-sm sm:text-base text-slate-600"
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45, ease: 'easeOut', delay: 0.2 }}
             >
               Sign in using your authorized Zenitech email to continue.
             </motion.p>
-            <div className="mx-auto mt-5 h-1 w-28 rounded-full bg-gradient-to-r from-indigo-500 to-rose-400"></div>
+            <div className="mx-auto mt-5 h-1 w-20 sm:w-28 rounded-full bg-gradient-to-r from-indigo-500 to-rose-400"></div>
           </div>
 
           {/* Form */}
           <motion.form
             onSubmit={handleSubmit}
-            className="space-y-6"
+            className="space-y-5 sm:space-y-6"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: 'easeOut', delay: 0.25 }}
           >
             <div>
-              <label className="mb-2 ml-1 block text-sm font-medium text-slate-700">
+              <label
+                htmlFor="email"
+                className="mb-2 ml-1 block text-sm font-medium text-slate-700"
+              >
                 Email address
               </label>
               <div className="relative group">
                 <Mail className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
                 <input
+                  id="email"
                   type="email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder="your.name@zenitech.in"
-                  className={`w-full rounded-xl border bg-white/90 backdrop-blur-sm pl-12 pr-4 py-3 text-slate-900 placeholder-slate-400 shadow-sm outline-none transition-all duration-300 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 ${
-                    error ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-300'
+                  className={`w-full rounded-xl border bg-white/90 backdrop-blur-sm pl-12 pr-4 py-3 text-sm sm:text-base text-slate-900 placeholder-slate-400 shadow-sm outline-none transition-all duration-300 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 ${
+                    error
+                      ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20'
+                      : 'border-slate-300'
                   }`}
                   required
                 />
@@ -138,7 +146,7 @@ const Login = () => {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               disabled={loading}
-              className={`group relative inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-3.5 font-medium text-white shadow-md transition-all ${
+              className={`group relative inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-3 font-medium text-white shadow-md transition-all sm:py-3.5 ${
                 loading
                   ? 'opacity-70 cursor-not-allowed'
                   : 'hover:shadow-lg hover:from-indigo-700 hover:to-indigo-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/30'
@@ -147,11 +155,11 @@ const Login = () => {
               {loading ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin" />
-                  <span className="text-base">Processing...</span>
+                  <span className="text-sm sm:text-base">Processing...</span>
                 </>
               ) : (
                 <>
-                  <span className="text-base">Continue</span>
+                  <span className="text-sm sm:text-base">Continue</span>
                   <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
                 </>
               )}
@@ -159,11 +167,15 @@ const Login = () => {
           </motion.form>
 
           {/* Footer */}
-          <div className="mt-10 text-center">
-            <p className="text-sm text-slate-500">Secure access via OTP verification</p>
-            <div className="mt-4 flex items-center justify-center gap-2">
+          <div className="mt-8 sm:mt-10 text-center">
+            <p className="text-xs sm:text-sm text-slate-500">
+              Secure access via OTP verification
+            </p>
+            <div className="mt-3 flex items-center justify-center gap-2">
               <span className="h-2 w-2 animate-pulse rounded-full bg-green-600"></span>
-              <span className="text-xs font-medium text-green-700">Encrypted Connection</span>
+              <span className="text-xs font-medium text-green-700">
+                Encrypted Connection
+              </span>
             </div>
           </div>
         </motion.div>

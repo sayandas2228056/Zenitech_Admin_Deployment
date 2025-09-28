@@ -1,120 +1,122 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Ticket, User, Mail, Phone, Clock, ArrowLeft, Calendar, MessageSquare, AlertCircle, Loader2 } from 'lucide-react';
+import React, { useEffect, useState, useCallback, useMemo } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  User,
+  Phone,
+  ArrowLeft,
+  Calendar,
+  MessageSquare,
+  AlertCircle,
+  Loader2,
+} from "lucide-react";
 
 const TicketDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+
   const [ticket, setTicket] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [updating, setUpdating] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState('Open');
+  const [selectedStatus, setSelectedStatus] = useState("Open");
 
+  const api = import.meta.env.VITE_ADMIN_API;
+  const token = useMemo(() => localStorage.getItem("token"), []);
+
+  // Redirect if token is missing
   useEffect(() => {
-    const fetchTicketDetails = async () => {
-      try {
-        setLoading(true);
-        const token = localStorage.getItem('token');
-        if (!token) {
-          navigate('/login');
-          return;
-        }
-        const api = import.meta.env.VITE_ADMIN_API;
-        const res = await fetch(`${api}/api/tickets/${id}`, {
-          headers: { 'Authorization': `Bearer ${token}` },
-          credentials: 'include',
-        });
-        if (res.status === 401) {
-          navigate('/login');
-          return;
-        }
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.message || 'Failed to fetch ticket details');
-        }
-        const data = await res.json();
-        setTicket(data);
-        setError(null);
-      } catch (err) {
-        console.error('Error fetching ticket:', err);
-        setError('Failed to load ticket details');
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (!token) navigate("/login");
+  }, [token, navigate]);
 
-    fetchTicketDetails();
-  }, [id, navigate]);
-
-  // Handle status selection changes locally
-  const handleStatusChange = (e) => {
-    setSelectedStatus(e.target.value);
-  };
-
-  // Persist status update to backend and optionally trigger email
-  const handleUpdateStatus = async () => {
-    if (!ticket) return;
+  // Fetch ticket details
+  const fetchTicketDetails = useCallback(async () => {
     try {
-      setUpdating(true);
-      const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-      const api = import.meta.env.VITE_ADMIN_API;
-      const res = await fetch(`${api}/api/tickets/${ticket._id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        credentials: 'include',
-        body: JSON.stringify({ status: selectedStatus }),
+      setLoading(true);
+      const res = await fetch(`${api}/api/tickets/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
+
       if (res.status === 401) {
-        navigate('/login');
+        navigate("/login");
         return;
       }
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || 'Failed to update status');
+        throw new Error(data.message || "Failed to fetch ticket details");
       }
+
+      const data = await res.json();
+      setTicket(data);
+      setSelectedStatus(data.status || "Open");
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching ticket:", err);
+      setError("Failed to load ticket details");
+    } finally {
+      setLoading(false);
+    }
+  }, [api, id, navigate, token]);
+
+  useEffect(() => {
+    fetchTicketDetails();
+  }, [fetchTicketDetails]);
+
+  // Update ticket status
+  const handleUpdateStatus = useCallback(async () => {
+    if (!ticket || selectedStatus === ticket.status) return;
+
+    try {
+      setUpdating(true);
+      const res = await fetch(`${api}/api/tickets/${ticket._id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: "include",
+        body: JSON.stringify({ status: selectedStatus }),
+      });
+
+      if (res.status === 401) {
+        navigate("/login");
+        return;
+      }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || "Failed to update status");
+      }
+
       const updated = await res.json();
       setTicket(updated);
-      // ensure local status reflects server
-      setSelectedStatus(updated.status || selectedStatus);
-      alert('Ticket status updated successfully');
+      setSelectedStatus(updated.status || "Open");
     } catch (err) {
-      console.error('Error updating status:', err);
-      alert(err.message || 'Failed to update status');
+      console.error("Error updating status:", err);
+      alert(err.message || "Failed to update status");
     } finally {
       setUpdating(false);
     }
-  };
+  }, [api, ticket, selectedStatus, token, navigate]);
 
-  // Keep local selected status in sync once ticket loads
-  useEffect(() => {
-    if (ticket?.status) {
-      setSelectedStatus(ticket.status);
-    }
-  }, [ticket]);
-
-  const getStatusBadge = (status) => {
+  // Precompute status badge styles
+  const getStatusBadge = useCallback((status) => {
     const statusStyles = {
-      'Open': 'bg-green-100 text-green-800',
-      'In Progress': 'bg-yellow-100 text-yellow-800',
-      'Closed': 'bg-red-100 text-red-800',
+      Open: "bg-green-100 text-green-800",
+      "In Progress": "bg-yellow-100 text-yellow-800",
+      Closed: "bg-red-100 text-red-800",
     };
     return (
-      <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusStyles[status] || 'bg-gray-100 text-gray-800'}`}>
+      <span
+        className={`px-3 py-1 rounded-full text-sm font-medium ${
+          statusStyles[status] || "bg-gray-100 text-gray-800"
+        }`}
+      >
         {status}
       </span>
     );
-  };
+  }, []);
 
-  // Priority removed from UI
-
+  // Loading State
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -126,13 +128,18 @@ const TicketDetails = () => {
     );
   }
 
+  // Error State
   if (error || !ticket) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center p-6 max-w-md mx-auto">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Ticket Not Found</h2>
-          <p className="text-gray-600 mb-6">We couldn't find the ticket you're looking for.</p>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">
+            Ticket Not Found
+          </h2>
+          <p className="text-gray-600 mb-6">
+            We couldn't find the ticket you're looking for.
+          </p>
           <button
             onClick={() => navigate(-1)}
             className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
@@ -161,14 +168,16 @@ const TicketDetails = () => {
           <div className="p-6 md:p-8">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">{ticket.subject}</h1>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  {ticket.subject}
+                </h1>
                 <p className="text-gray-500 mt-1">Ticket #{ticket.token}</p>
               </div>
               <div className="mt-4 md:mt-0 flex items-center gap-3">
                 {getStatusBadge(ticket.status)}
                 <select
                   value={selectedStatus}
-                  onChange={handleStatusChange}
+                  onChange={(e) => setSelectedStatus(e.target.value)}
                   disabled={updating}
                   className="px-3 py-2 rounded-lg border border-orange-200 bg-white text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-400/40 focus:border-orange-400 transition disabled:opacity-60"
                 >
@@ -181,42 +190,53 @@ const TicketDetails = () => {
                   disabled={updating || selectedStatus === ticket.status}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     updating || selectedStatus === ticket.status
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      : 'bg-orange-500 text-white hover:bg-orange-600'
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                      : "bg-orange-500 text-white hover:bg-orange-600"
                   }`}
                 >
-                  {updating ? 'Updating...' : 'Update Status'}
+                  {updating ? "Updating..." : "Update Status"}
                 </button>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Requested By */}
               <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-2">Requested By</h3>
+                <h3 className="text-sm font-medium text-gray-500 mb-2">
+                  Requested By
+                </h3>
                 <div className="flex items-center">
                   <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center mr-3">
                     <User className="w-5 h-5 text-orange-600" />
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">{ticket.name || 'No name provided'}</p>
-                    <p className="text-sm text-gray-500">{ticket.email || 'No email provided'}</p>
+                    <p className="font-medium text-gray-900">
+                      {ticket.name || "No name provided"}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {ticket.email || "No email provided"}
+                    </p>
                   </div>
                 </div>
               </div>
 
-              {/* Priority removed */}
-
+              {/* Created Date */}
               <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-2">Created</h3>
+                <h3 className="text-sm font-medium text-gray-500 mb-2">
+                  Created
+                </h3>
                 <div className="flex items-center text-gray-700">
                   <Calendar className="w-4 h-4 mr-2 text-gray-400" />
                   {new Date(ticket.createdAt).toLocaleString()}
                 </div>
               </div>
 
+              {/* Phone */}
               {ticket.phone && (
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Contact</h3>
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">
+                    Contact
+                  </h3>
                   <div className="flex items-center text-gray-700">
                     <Phone className="w-4 h-4 mr-2 text-gray-400" />
                     {ticket.phone}
@@ -234,33 +254,52 @@ const TicketDetails = () => {
               <MessageSquare className="w-5 h-5 text-orange-500 mr-2" />
               Description
             </h2>
-            <div className="prose max-w-none">
-              <p className="text-gray-700 whitespace-pre-line">{ticket.description || 'No description provided.'}</p>
-            </div>
+            <p className="text-gray-700 whitespace-pre-line">
+              {ticket.description || "No description provided."}
+            </p>
           </div>
         </div>
 
         {/* Attachments */}
-        {ticket.attachments && ticket.attachments.length > 0 && (
+        {ticket.attachments?.length > 0 && (
           <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">
             <div className="p-6 md:p-8">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Attachments</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                Attachments
+              </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {ticket.attachments.map((attachment, index) => (
-                  <div key={index} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                  <div
+                    key={index}
+                    className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                  >
                     <div className="flex items-start">
                       <div className="bg-orange-100 p-2 rounded-lg mr-3">
-                        <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        <svg
+                          className="w-6 h-6 text-orange-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                          />
                         </svg>
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900 truncate">{attachment.filename}</p>
+                        <p className="font-medium text-gray-900 truncate">
+                          {attachment.filename}
+                        </p>
                         <p className="text-sm text-gray-500">
-                          {attachment.size ? `${(attachment.size / 1024).toFixed(2)} KB` : 'Size not available'}
+                          {attachment.size
+                            ? `${(attachment.size / 1024).toFixed(2)} KB`
+                            : "Size not available"}
                         </p>
                         {attachment.url && (
-                          <a 
+                          <a
                             href={attachment.url}
                             target="_blank"
                             rel="noopener noreferrer"

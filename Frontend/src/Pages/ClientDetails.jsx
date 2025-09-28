@@ -13,17 +13,20 @@ const ClientDetails = () => {
   const api = import.meta.env.VITE_ADMIN_API;
 
   useEffect(() => {
-    const run = async () => {
+    const fetchTickets = async () => {
       try {
         setLoading(true);
         const token = localStorage.getItem('token');
-        if (!token) { navigate('/login'); return; }
+        if (!token) return navigate('/login');
+
         const res = await fetch(`${api}/api/clients/${encodeURIComponent(email)}/tickets`, {
-          headers: { 'Authorization': `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}` },
           credentials: 'include',
         });
-        if (res.status === 401) { navigate('/login'); return; }
+
+        if (res.status === 401) return navigate('/login');
         if (!res.ok) throw new Error('Failed to fetch client tickets');
+
         const data = await res.json();
         setTickets(data);
         setError(null);
@@ -33,24 +36,27 @@ const ClientDetails = () => {
         setLoading(false);
       }
     };
-    run();
+
+    fetchTickets();
   }, [email, api, navigate]);
 
   const handleDelete = async (ticketId) => {
-    if (!ticketId) return;
-    if (!window.confirm('Are you sure you want to delete this ticket?')) return;
+    if (!ticketId || !window.confirm('Are you sure you want to delete this ticket?')) return;
 
     try {
       setDeletingId(ticketId);
       const token = localStorage.getItem('token');
-      if (!token) { navigate('/login'); return; }
+      if (!token) return navigate('/login');
+
       const res = await fetch(`${api}/api/tickets/${ticketId}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` },
         credentials: 'include',
       });
-      if (res.status === 401) { navigate('/login'); return; }
+
+      if (res.status === 401) return navigate('/login');
       if (!res.ok) throw new Error('Failed to delete ticket');
+
       setTickets((prev) => prev.filter((t) => t._id !== ticketId));
     } catch (e) {
       alert(e.message || 'Failed to delete ticket');
@@ -63,9 +69,9 @@ const ClientDetails = () => {
   const clientPhone = tickets[0]?.phone || '';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-red-50 px-6 pt-28 pb-12">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-red-50 px-4 sm:px-6 pt-24 pb-12">
       <div className="max-w-6xl mx-auto space-y-8">
-        
+
         {/* Back button */}
         <button
           onClick={() => navigate(-1)}
@@ -77,11 +83,11 @@ const ClientDetails = () => {
 
         {/* Client Info Card */}
         <div className="bg-white shadow-md rounded-2xl p-6 border border-orange-100">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Client Details</h1>
-          <div className="grid sm:grid-cols-3 gap-4 text-gray-700">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">Client Details</h1>
+          <div className="grid gap-4 sm:grid-cols-3 text-gray-700">
             <div>
               <span className="block text-sm font-semibold text-gray-500">Email</span>
-              <span className="text-gray-900">{email}</span>
+              <span className="text-gray-900 break-all">{email}</span>
             </div>
             <div>
               <span className="block text-sm font-semibold text-gray-500">Name</span>
@@ -95,12 +101,10 @@ const ClientDetails = () => {
         </div>
 
         {/* Tickets Section */}
-        <div className="bg-white shadow-md rounded-2xl overflow-hidden border border-orange-100">
-          <div className="px-6 py-4 border-b bg-gray-50 flex items-center justify-between">
+        <div className="bg-white shadow-md rounded-2xl border border-orange-100 overflow-hidden">
+          <div className="px-4 sm:px-6 py-4 border-b bg-gray-50 flex flex-col sm:flex-row items-center justify-between gap-2">
             <h2 className="text-lg font-semibold text-gray-800">Tickets</h2>
-            <span className="text-sm text-gray-500">
-              Total: {tickets.length}
-            </span>
+            <span className="text-sm text-gray-500">Total: {tickets.length}</span>
           </div>
 
           {loading ? (
@@ -111,29 +115,34 @@ const ClientDetails = () => {
             <div className="p-6 text-center text-gray-600">No tickets for this client.</div>
           ) : (
             <div className="divide-y">
-              {/* Table Head */}
-              <div className="grid grid-cols-12 gap-2 px-6 py-3 text-xs font-semibold text-gray-600 bg-gray-50">
+              {/* Table Head - hidden on mobile */}
+              <div className="hidden sm:grid grid-cols-12 gap-2 px-6 py-3 text-xs font-semibold text-gray-600 bg-gray-50">
                 <div className="col-span-7">Subject</div>
                 <div className="col-span-3">Status</div>
                 <div className="col-span-2 text-right">Actions</div>
               </div>
-              
-              {/* Table Rows */}
+
+              {/* Ticket Rows */}
               {tickets.map((t) => (
                 <div
                   key={t._id}
-                  className="grid grid-cols-12 gap-2 px-6 py-4 items-center hover:bg-orange-50/40 transition-colors"
+                  className="flex flex-col sm:grid sm:grid-cols-12 gap-3 sm:gap-2 px-4 sm:px-6 py-4 items-start sm:items-center hover:bg-orange-50/40 transition-colors"
                 >
-                  <div className="col-span-7">
+                  {/* Subject */}
+                  <div className="sm:col-span-7 w-full">
                     <div className="font-medium text-gray-900">{t.subject}</div>
                     <div className="text-xs text-gray-500">Token #{t.token}</div>
                   </div>
-                  <div className="col-span-3">
+
+                  {/* Status */}
+                  <div className="sm:col-span-3">
                     <span className="px-2 py-1 text-xs rounded-lg bg-gray-100 text-gray-700">
                       {t.status}
                     </span>
                   </div>
-                  <div className="col-span-2 flex justify-end gap-3">
+
+                  {/* Actions */}
+                  <div className="sm:col-span-2 flex gap-4 sm:justify-end">
                     <Link
                       className="text-orange-600 hover:text-orange-700 font-medium text-sm"
                       to={`/tickets/${t._id}`}
